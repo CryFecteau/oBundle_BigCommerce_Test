@@ -1,146 +1,118 @@
-# Cornerstone
-![tests](https://github.com/bigcommerce/cornerstone/workflows/Theme%20Bundling%20Test/badge.svg?branch=master)
+# oBundle BigCommerce Test
 
-Stencil's Cornerstone theme is the building block for BigCommerce theme developers to get started quickly developing premium quality themes on the BigCommerce platform.
+## Task 1
+### "Create a product called Special Item... create a feature that will show the product's second image when it is hovered on."
 
-### Stencil Utils
-[Stencil-utils](https://github.com/bigcommerce/stencil-utils) is our supporting library for our events and remote interactions.
 
-## JS API
-When writing theme JavaScript (JS) there is an API in place for running JS on a per page basis. To properly write JS for your theme, the following page types are available to you:
+#### I enhanced the card.html template in the product templates by incorporating a second image. This was achieved by restricting the usage to only two images from the product gallery and designating the image with an index of 1 as the second image.
+```html
+<div class="card-img-container">
+    {{> components/common/responsive-img
+    image=image
+    id="defualt-card-image"
+    class="card-image"
+    fallback_size=theme_settings.productgallery_size
+    lazyload=theme_settings.lazyload_mode
+    default_image=theme_settings.default_image_product
+    }}
+    {{#each (limit images 2)}}
+    {{#if @index '===' 1}}
+    <img id="second-card-image" class="card-image"
+        src="{{getImage this 'productgallery_size' (cdn theme_settings.default_image_product)}}"
+        alt="{{this.alt}}" title="{{this.alt}}">
+    {{/if}}
+    {{/each}}
+</div>
+```
 
-* "pages/account/addresses"
-* "pages/account/add-address"
-* "pages/account/add-return"
-* "pages/account/add-wishlist"
-* "pages/account/recent-items"
-* "pages/account/download-item"
-* "pages/account/edit"
-* "pages/account/return-saved"
-* "pages/account/returns"
-* "pages/account/payment-methods"
-* "pages/auth/login"
-* "pages/auth/account-created"
-* "pages/auth/create-account"
-* "pages/auth/new-password"
-* "pages/blog"
-* "pages/blog-post"
-* "pages/brand"
-* "pages/brands"
-* "pages/cart"
-* "pages/category"
-* "pages/compare"
-* "pages/errors"
-* "pages/gift-certificate/purchase"
-* "pages/gift-certificate/balance"
-* "pages/gift-certificate/redeem"
-* "global"
-* "pages/home"
-* "pages/order-complete"
-* "pages/page"
-* "pages/product"
-* "pages/search"
-* "pages/sitemap"
-* "pages/subscribed"
-* "pages/account/wishlist-details"
-* "pages/account/wishlists"
+#### I updated the styles to ensure that the second image is displayed only when hovering over the first image.
+```css
+    #second-card-image {
+        display: none;
+    }
 
-These page types will correspond to the pages within your theme. Each one of these page types map to an ES6 module that extends the base `PageManager` abstract class.
+    .card-img-container:hover #second-card-image {
+        display: block;
+    }
 
-```javascript
-    export default class Auth extends PageManager {
-        constructor() {
-            // Set up code goes here; attach to internals and use internals as you would 'this'
-        }
+    .card-img-container:hover #default-card-image {
+        display: none;
     }
 ```
 
-### JS Template Context Injection
-Occasionally you may need to use dynamic data from the template context within your client-side theme application code.
+## Task 2
+### "Add a button at the top of the category page... When clicked, the product will be added to the cart. Notify the user that the product has been added. If the cart has an item in it - show a button next to the Add All To Cart button which says Remove All Items. When clicked it should clear the cart and notify the user"
 
-Two helpers are provided to help achieve this.
-
-The inject helper allows you to compose a JSON object with a subset of the template context to be sent to the browser.
-
-```
-{{inject "stringBasedKey" contextValue}}
-```
-
-To retrieve the parsable JSON object, just call `{{jsContext}}` after all of the `{{@inject}}` calls.
-
-For example, to setup the product name in your client-side app, you can do the following if you're in the context of a product:
-
+#### I introduced two new buttons, allowing users to easily add or remove all items. Utilizing an 'if' statement, I dynamically assess the presence of a cart ID (indicating items in the cart). Consequently, the 'Remove All' button is displayed when a cart ID is detected, and hidden when it's not.
 ```html
-{{inject "myProductName" product.title}}
+{{~inject 'cartId' cart_id}}
+<div class="page-content" id="product-listing-container">
+    {{#if customer}}
+    <div class="customer-info-banner">
+        <h1>{{customer.name}}</h1>
+        <p>{{customer.email}}</p>
+        <p>{{customer.phone}}</p>
+    </div>
+    {{/if}}
+    <button onclick="addAllToCart()" class="button button--primary" type="button">
+        Add All To Cart
+    </button>
 
-<script>
-// Note the lack of quotes around the jsContext handlebars helper, it becomes a string automatically.
-var jsContext = JSON.parse({{jsContext}}); // jsContext would output "{\"myProductName\": \"Sample Product\"}" which can feed directly into your JavaScript
-
-console.log(jsContext.myProductName); // Will output: Sample Product
-</script>
+    {{#if cart_id}}
+    <button onclick="removeAllFromCart()" class="button button--primary" type="button">
+        Remove All Items
+    </button>
+    {{/if}}
+    {{> components/category/product-listing}}
+    {{{region name="category_below_content"}}}
+</div>
 ```
 
-You can compose your JSON object across multiple pages to create a different set of client-side data depending on the currently loaded template context.
+#### Employing my store's API, I successfully implemented the addition of items to the cart through the utilization of existing line items on the page. Furthermore, I employed the cart ID to facilitate the seamless removal of these items.
+```javascript 
+let cartId = '{{cart_id}}';
+const lineItemIds = document.querySelectorAll("[data-entity-id]");
+const currentLineItemsArray = Array.from(lineItemIds).map(lineItemId => ({
+    quantity: 1,
+    productId: lineItemId.dataset.entityId
+}))
 
-The stencil theme makes the jsContext available on both the active page scoped and global PageManager objects as `this.context`.
-
-## Polyfilling via Feature Detection
-Cornerstone implements [this strategy](https://philipwalton.com/articles/loading-polyfills-only-when-needed/) for polyfilling.
-
-In `templates/components/common/polyfill-script.html` there is a simple feature detection script which can be extended to detect any recent JS features you intend to use in your theme code.
-
-If any one of the conditions is not met, an additional blocking JS bundle configured in `assets/js/polyfills.js` will be loaded to polyfill modern JS features before the main bundle executes. 
-
-This intentionally prioritizes the experience of the 90%+ of shoppers who are on modern browsers in terms of performance, while maintaining compatibility (at the expense of additional JS download+parse for the polyfills) for users on legacy browsers.
-
-## Static assets
-Some static assets in the Stencil theme are handled with Grunt if required. This
-means you have some dependencies on grunt and npm. To get started:
-
-First make sure you have Grunt installed globally on your machine:
-
-```
-npm install -g grunt-cli
-```
-
-and run:
-
-```
-npm install
-```
-
-Note: package-lock.json file was generated by Node version 18 and npm version 9. The app supports Node 18 as well as multiple versions of npm, but we should always use those versions when updating package-lock.json, unless it is decided to upgrade those, and in this case the readme should be updated as well. If using a different version for node OR npm, please delete the package-lock.json file prior to installing node packages and also prior to pushing to github.
-
-If updating or adding a dependency, please double check that you are working on Node version 9 and npm version 9 and run ```npm update <package_name>```  or ```npm install <package_name>``` (avoid running npm install for updating a package). After updating the package, please make sure that the changes in the package-lock.json reflect only the updated/new package prior to pushing the changes to github.
+const addAllToCart = async () => {
+    await fetch(`https://crystal-fecteau.mybigcommerce.com/api/storefront/carts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: `{"lineItems":${JSON.stringify(currentLineItemsArray)}}`,
+    }).then((res) => {
+        alert('Items added to cart');
+        location.reload();
+    }).catch(error => console.error(error));
+}
 
 
-### Icons
-Icons are delivered via a single SVG sprite, which is embedded on the page in
-`templates/layout/base.html`. It is generated via a grunt task `grunt svgstore`.
-
-The task takes individual SVG files for each icon in `assets/icons` and bundles
-them together, to be inlined on the top of the theme, via an ajax call managed
-by svg-injector. Each icon can then be called in a similar way to an inline image via:
-
-```
-<svg><use xlink:href="#icon-svgFileName" /></svg>
+const removeAllFromCart = async () => {
+    if (cartId) {
+        await fetch(`https://crystal-fecteau.mybigcommerce.com/api/storefront/carts/${cartId}`, {
+            method: "DELETE",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+        }).then(res => {
+            alert('Items removed from cart');
+            location.reload();
+        }).catch(error => console.error(error));
+    }
+}
 ```
 
-The ID of the SVG icon you are calling is based on the filename of the icon you want,
-with `icon-` prepended. e.g. `xlink:href="#icon-facebook"`.
+## Task 3 (bonus)
+### If a customer is logged in - at the top of the category page show a banner that shows some customer details...
 
-Simply add your new icon SVG file to the icons folder, and run `grunt svgstore`,
-or just `grunt`.
-
-#### License
-
-(The MIT License)
-Copyright (C) 2015-present BigCommerce Inc.
-All rights reserved.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#### By utilizing an 'if' statement, I dynamically determine whether a customer is logged in. If a customer is indeed logged in, their information is displayed.
+```html        
+{{#if customer}}
+        <div class="customer-info-banner">
+            <h1>{{customer.name}}</h1>
+            <p>{{customer.email}}</p>
+            <p>{{customer.phone}}</p>
+        </div>
+{{/if}}
+```
