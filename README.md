@@ -1,5 +1,9 @@
 # oBundle BigCommerce Test
 
+## View Website
+### Preview Code: 3cv5w6zpea
+### Website URL: [crystal-fecteau.mybigcommerce.com](https://crystal-fecteau.mybigcommerce.com/?ctk=2a64dd12-245f-40bf-a7b0-0fccb122970d) 
+
 ## Task 1
 ### "Create a product called Special Item... create a feature that will show the product's second image when it is hovered on."
 
